@@ -2,13 +2,19 @@
 
 ### 适合对象：
 
-Linux&C/C++初学者
+Linux&C/C++初学者，掌握了一定c/c++编程基础但还未实际编写应用程序的。
 
 ### 实验内容：
 
 参考Linux-bash命令行中pstree的命令参数与效果，复刻一个简版的pstree
 
 （实验来自NJU2022操作系统课程：[M1: 打印进程树 (pstree) (jyywiki.cn)](https://jyywiki.cn/OS/2022/labs/M1.html)）
+
+### 预期收获：
+
+你将初步了解linux系统内部的文件结构与组织方式，主动学习完成一个支持多个参数的命令行应用程序
+
+当然，也可能你首次接触STFW和RTFM，不过现在应该再多一个LWGPT。
 
 ### 分析与实现:
 
@@ -19,12 +25,53 @@ Linux&C/C++初学者
 **例如：** 
 
 ```bash
->pstree 
-
->pstree -p
-
->pstree -p -n
-
+~/Documents/OS_Lab_pstree$ pstree 
+systemd─┬─ModemManager───2*[{ModemManager}]
+        ├─NetworkManager───2*[{NetworkManager}]
+        ├─VGAuthService
+        ├─accounts-daemon───2*[{accounts-daemon}]
+        ├─acpid
+        ├─anacron
+        ├─apt.systemd.dai───apt.systemd.dai───apt-get─┬─gpgv
+        │                                             ├─3*[http]
+        │                                             └─2*[https]
+        ├─avahi-daemon───avahi-daemon
+...
+~/Documents/OS_Lab_pstree$ pstree -p
+systemd(1)─┬─ModemManager(916)─┬─{ModemManager}(962)
+           │                   └─{ModemManager}(985)
+           ├─NetworkManager(847)─┬─{NetworkManager}(945)
+           │                     └─{NetworkManager}(947)
+           ├─VGAuthService(712)
+           ├─accounts-daemon(837)─┬─{accounts-daemon}(939)
+           │                      └─{accounts-daemon}(944)
+           ├─acpid(838)
+           ├─anacron(154364)
+           ├─avahi-daemon(841)───avahi-daemon(867)
+           ├─bluetoothd(842)
+           ├─colord(2112)─┬─{colord}(2115)
+           │              └─{colord}(2117)
+...
+~/Documents/OS_Lab_pstree$ pstree -p -n
+systemd(1)─┬─systemd-journal(345)
+           ├─vmware-vmblock-(371)─┬─{vmware-vmblock-}(372)
+           │                      └─{vmware-vmblock-}(373)
+           ├─systemd-udevd(406)
+           ├─systemd-oomd(676)
+           ├─systemd-resolve(682)
+           ├─systemd-timesyn(684)───{systemd-timesyn}(756)
+           ├─VGAuthService(712)
+           ├─vmtoolsd(714)─┬─{vmtoolsd}(898)
+           │               ├─{vmtoolsd}(899)
+           │               └─{vmtoolsd}(933)
+           ├─accounts-daemon(837)─┬─{accounts-daemon}(939)
+           │                      └─{accounts-daemon}(944)
+           ├─acpid(838)
+           ├─avahi-daemon(841)───avahi-daemon(867)
+           ├─bluetoothd(842)
+           ├─cron(844)
+           ├─dbus-daemon(846)
+...
 ```
 
 显而易见，如果你知道“如何将大象放进冰箱”，那么就一定能看出来我们即将设计的程序可以分为“读取并解析指令输入”、“处理数据”和“打印数据”三个阶段。接下来我就会依次讲解这三个阶段的完成过程。
@@ -91,11 +138,16 @@ static const struct option long_option[]={
 #### 阶段二：处理进程信息
 接下来的部分大概就是整个实验最难也是最关键的部分了
 ##### 获取进程信息
-不知大家是否听过一句话，叫做“Linux中，一切皆文件”。大意就是指在Linux系统中，所有的一切都可以通过文件的方式访问、管理。这包括硬件设备、进程、套接字等，即使它们本身不是文件，也被抽象成文件。https://zhuanlan.zhihu.com/p/349354666
-因此，我们可以直接从系统根目录下的“/proc”目录获得包含当前系统所有进程信息的文件https://www.cnblogs.com/DswCnblog/p/5780389.html。这里建议大家阅读博客的同时自己在linux终端找到该目录并打印其中的文件，观察其内容结构是否符合预期。
+不知大家是否听过一句话，叫做“[Linux中，一切皆文件](https://zhuanlan.zhihu.com/p/349354666)”。大意就是指在Linux系统中，所有的一切都可以通过文件的方式访问、管理。这包括硬件设备、进程、套接字等，即使它们本身不是文件，也被抽象成文件。
+
+因此，我们可以直接从系统根目录下的“/proc”目录获得包含当前系统所有进程信息的文件。这里建议大家阅读[博客](https://www.cnblogs.com/DswCnblog/p/5780389.html)的同时自己在linux终端找到**该目录**并**打印**（cat）其中的文件，观察其内容结构是否符合预期。
+
 直接说结论，所有以数字作为文件名的目录就是我们要找到目标文件。每个数字就是系统进程的id，文件里存放的就是该进程的所有信息。我们只需找到代表其父进程和子进程的字符串（数字），就可以在逻辑上构建出一棵进程树。当然，别忘了一并读取必要的进程信息。
+
 思路有了，接下来就是实践了
-相信一定有人发现，“/proc”目录下不仅有以数字作为文件名的文件，还有很多其他无关文件。所以我们不得不先从寻找所有进程相关文件开始。
+
+相信细心的你一定能发现，“/proc”目录下不仅有以数字作为文件名的文件，还有很多其他无关文件。所以我们不得不先从寻找所有进程相关文件开始。
+
 ```
 static void get_pids(const char *dirName){
         //打开指定目录
@@ -188,3 +240,84 @@ static void insert_ptree(long pid) {
 	ind[pNode->ppid] -> spid.push_back(pNode);
 }
 ```
+
+最后，我们只需要一个建树的静态方法就可以完成该头文件的设计了。当然，你也可以在主函数中编写这个步骤，虽然会增加代码间的耦合，不过对于一个实验作业，到也无关紧要了。
+
+这部分代码希望大家自行思考设计，需要参考请克隆本项目。
+
+#### 阶段三：打印一棵树
+
+我们现在已经完整的在内存中构建起了一棵树，但还记得官方pstree指令是如何打印树的吗？
+
+```bash
+~/Documents/OS_Lab_pstree$ pstree -p
+systemd(1)─┬─ModemManager(916)─┬─{ModemManager}(962)
+           │                   └─{ModemManager}(985)
+           ├─NetworkManager(847)─┬─{NetworkManager}(945)
+           │                     └─{NetworkManager}(947)
+           ├─VGAuthService(712)
+           ├─accounts-daemon(837)─┬─{accounts-daemon}(939)
+           │                      └─{accounts-daemon}(944)
+           ├─acpid(838)
+           ├─anacron(154364)
+           ├─avahi-daemon(841)───avahi-daemon(867)
+           ├─bluetoothd(842)
+           ├─colord(2112)─┬─{colord}(2115)
+           │              └─{colord}(2117)
+           ├─containerd(979)─┬─{containerd}(1030)
+           │                 ├─{containerd}(1031)
+           │                 ├─{containerd}(1032)
+           │                 ├─{containerd}(1033)
+           │                 ├─{containerd}(1034)
+           │                 ├─{containerd}(1035)
+           │                 ├─{containerd}(1143)
+           │                 └─{containerd}(1144)
+...
+```
+
+没错，我们现在就是要把这棵逻辑上存放于内存的树给它形象的“画”出来，还要能够根据命令提供参数的不同作出不同的“画”。
+
+有一定编程经验的小伙伴一定能看出来，运用递归的思想就可以优雅的设计出这棵树的形体。相信大家都尝试过打印“杨辉三角”吧，这也是同样的道理。不了解的小伙伴可以点击[这里学习](https://blog.csdn.net/m0_52072919/article/details/119032272)如何[打印杨辉三角](http://101.132.172.57/problem.php?id=1088)。
+
+这里给出鄙人的设计思路，仅供参考：
+
+```
+//几种不同的打印树的逻辑，具体由命令行参数决定
+static void print_tree(PTree *root,char *pre, int idx){
+        if(root == NULL) return;
+        //打印行前缀
+        if(idx != 0)
+                printf("%s", pre);
+        //打印行末的进程信息并回车
+        if(root->spid.size() == 0)
+        {printf("-%s\n", root->cmd);return;}
+        //打印该节点信息并遍历打印子节点
+        if(root->spid.size() > 0){
+                printf("-%s--", root->cmd);
+                //更新行前缀
+                char *new_pre;
+                int len = strlen(pre);
+                int lens = len + strlen(root->cmd) + 3;
+                new_pre = (char*)malloc(lens);
+                strcpy(new_pre, pre);
+                for(int i = len; i < lens-1; i++)
+                        new_pre[i] = ' ';
+                if(root->spid.size() == 1)
+                        new_pre[lens-1] = ' ';
+                else
+                        new_pre[lens-1] = '|';
+                //遍历打印子节点，下标i用来使第一个子节点向右打印
+                int i = 0;
+		std::sort(root->spid.begin(), root->spid.end(), cmp);
+                for(auto g:root->spid)
+                print_tree(g, new_pre, i), i++;
+                return;
+        }
+        return;
+}
+```
+
+#### 编译与运行
+
+如果你是第一次执行包含多个头文件的c/c++项目，可以自行学习[makefile的使用](https://makefiletutorial.com/)。
+

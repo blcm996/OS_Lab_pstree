@@ -22,7 +22,8 @@ int main(int argc, char *argv[]) {
         //根据命令行参数选择打印进程树的方式
         if(show_version)
                 printf("%s\n", version);
-        else if(show_pids && !numeric_sort)
+        
+        if(show_pids && !numeric_sort)
                 print_tree_pid(root_1, pre, 1);
         else if(!show_pids && numeric_sort)
                 print_tree_n(root_1, pre, 1);

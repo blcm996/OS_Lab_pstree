@@ -1,11 +1,11 @@
-
 #include "getpid.h"
+std::vector <long> pids;
 
 long dirent_to_pid(struct dirent* dirItem) {
 	assert(dirItem);
 
 	long pid = 0;
-	if(dirItem->d_type == DT_DIR){
+	
 		char *name = dirItem->d_name;
 		for(int i = 0; name[i]; i++){
 			if(name[i] > '9' || name[i] < '0')
@@ -13,8 +13,7 @@ long dirent_to_pid(struct dirent* dirItem) {
 			pid = pid * 10 + name[i] - '0';
 		}
 		return pid;
-	}
-	return -1;
+
 }
 
 void insert_pid(long pid){
@@ -45,7 +44,9 @@ void get_pids(const char *dirName){
         //依次读取目录并转为long类型来保存
         struct dirent *dirItem = NULL;
         while((dirItem = readdir(dir)) != NULL){
-                long pid = dirent_to_pid(dirItem);
-                if (pid > 0) insert_pid(pid);
+			if(dirItem->d_type == DT_DIR){
+				long pid = dirent_to_pid(dirItem);
+            	if (pid > 0) insert_pid(pid);
+			}
         }
 }

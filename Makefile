@@ -2,7 +2,7 @@
 
 # Compiler and flags
 CC = g++
-CFLAGS = -O2 -Wall -I.
+CFLAGS = -Wall -I.
 
 # Source files
 SRCS = getpid.cpp pidinfo.cpp prase.cpp treePrint.cpp pstree.cpp

@@ -4,7 +4,7 @@
 #include <getopt.h>
 #include <stdbool.h>
 
-static int show_version = 0, numeric_sort = 0, show_pids = 0;
+extern int show_version , numeric_sort , show_pids;
 static const struct option long_option[]={
 	{"show_pids", optional_argument, &show_pids, 1},
 	{"numeric_sort", optional_argument, &numeric_sort, 1},

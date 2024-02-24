@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <vector>
 //static pid_t* pids = NULL;
-static std::vector <long> pids;
+extern std::vector <long> pids;
 /*
 static int pids_capacity = 0, pids_number = 0;
 const static int pids_initial_capacity = 8;

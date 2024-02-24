@@ -4,6 +4,8 @@
 #include "prase.h"
 #include <assert.h>
 
+int show_version = 0, numeric_sort = 0, show_pids = 0;
+
 void prase_arguements(int argc, char *argv[]) {
 	//解析cmd参数
 	//校验argv合法性

@@ -1,11 +1,24 @@
-在linux环境下运行
-执行
-	gcc pstree.cpp -lstdc++  
+### 在linux环境下运行
 
-或者
+#### 先构建
 
-make
-后，再
-	./a.out  (-p/-n/-V/--show-pids/--show-version/--numeric-sort)
-可附加括号内的命令执行a.out文件 
+```bash
+~& make
+```
+
+#### 再执行
+
+```bash
+~& ./Pstree
+~& ./Pstree -V
+~& ./Pstree -n
+~& ./Pstree -p
+~& ./Pstree -n -p
+```
+
+#### 待完善
+
+--help 帮助提示
+
+Guild.md中对于打印树的讲解
 

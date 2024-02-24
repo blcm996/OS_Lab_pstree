@@ -21,9 +21,8 @@ int main(int argc, char *argv[]) {
         char *version = "pstree (c++) 1.3\nCopyright (C) 2002-2023 BLCM\nThis is my class lab, and you are welcome to redistribute it underthe terms of the GNU General Public License.\nFor more information about these matters, please send e-mail to b886866b@163.com.";
         //根据命令行参数选择打印进程树的方式
         if(show_version)
-                printf("%s\n", version);
-        
-        if(show_pids && !numeric_sort)
+                printf("%s\n", version);     
+        else if(show_pids && !numeric_sort)
                 print_tree_pid(root_1, pre, 1);
         else if(!show_pids && numeric_sort)
                 print_tree_n(root_1, pre, 1);
